@@ -24,9 +24,10 @@ install_server() {
     log "Installing/Updating Palworld Windows Server (AppID ${APPID})"
 
     ## Fix permissions: Unraid uses FUSE-mounted volumes where chown may
-    ## not work. Use chmod 777 so the steam user (UID 1000) can write.
-    ## Also fix SteamCMD's own directory — it internally switches to steam.
-    chmod 777 "${SERVER_DIR}" 2>/dev/null || true
+    ## silently fail. Use chmod to ensure writeability regardless of filesystem.
+    ## -R is needed because failed installs leave root-owned subdirectories.
+    ## Also fix SteamCMD's own directory — it switches from root to steam internally.
+    chmod -R 777 "${SERVER_DIR}" 2>/dev/null || true
     chown -R steam:steam /home/steam 2>/dev/null || true
 
     local manifest_arg=""
@@ -35,7 +36,9 @@ install_server() {
         manifest_arg="-manifest ${TARGET_MANIFEST_ID}"
     fi
 
-    "${STEAMCMD}" \
+    ## Run SteamCMD as the steam user via gosu. This avoids the internal
+    ## root→steam switch which can fail when the steam home dir isn't writable.
+    gosu steam "${STEAMCMD}" \
         +@sSteamCmdForcePlatformType windows \
         +force_install_dir "${SERVER_DIR}" \
         +login anonymous \
