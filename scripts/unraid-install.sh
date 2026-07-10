@@ -1,15 +1,18 @@
 #!/bin/bash
 ## =============================================================================
-## Unraid one-shot installer for Palworld Proton Server
-## Copy and paste this entire block into the Unraid terminal (WebUI > Terminal)
-## After running, the container appears in the Docker tab — edit settings in the GUI.
-## WebUI button opens the Palworld REST API (server info, players, metrics).
+## Unraid template installer for Palworld Proton Server
+## Copy-paste this entire block into the Unraid terminal (WebUI > Terminal).
+## Then go to Docker tab > Add Container > select the template > Apply.
+## This gives you the Edit button + WebUI icon in the Docker tab.
 ## =============================================================================
 
-## --- 1. Create directory structure on the array ---
+## --- 1. Remove any broken container from a previous run ---
+docker rm -f palworld-proton-server 2>/dev/null || true
+
+## --- 2. Create directory structure on the array ---
 mkdir -p /mnt/user/appdata/palworld-proton-server/{game,mods/Win64,mods/pak}
 
-## --- 2. Create Unraid template (enables GUI editing + WebUI button) ---
+## --- 3. Create Unraid template XML (appears in Add Container dropdown) ---
 mkdir -p /boot/config/plugins/dockerMan/templates-user/
 cat > /boot/config/plugins/dockerMan/templates-user/palworld-proton-server.xml << 'XMLEOF'
 <?xml version="1.0"?>
@@ -19,7 +22,11 @@ cat > /boot/config/plugins/dockerMan/templates-user/palworld-proton-server.xml <
     <Repository>ghcr.io/adam2893/palworld-proton-server:latest</Repository>
     <Network>bridge</Network>
     <Shell>bash</Shell>
+    <Privileged>false</Privileged>
     <WebUI>http://[IP]:[PORT:8212]/v1/api/info</WebUI>
+    <Restart>unless-stopped</Restart>
+    <StopTimeout>30</StopTimeout>
+    <ExtraParams>--security-opt=no-new-privileges:true --security-opt=seccomp=unconfined -v /etc/machine-id:/etc/machine-id:ro</ExtraParams>
     <Config Name="Game Port" Target="8211" Mode="udp" Description="Game port (UDP)" Type="Port" Value="8211"/>
     <Config Name="Query Port" Target="27015" Mode="udp" Description="Steam query port (UDP)" Type="Port" Value="27015"/>
     <Config Name="RCON Port" Target="25575" Mode="tcp" Description="RCON port (TCP) — do not expose publicly" Type="Port" Value="25575"/>
@@ -42,77 +49,39 @@ cat > /boot/config/plugins/dockerMan/templates-user/palworld-proton-server.xml <
     <Config Name="Multithreading" Target="MULTITHREADING" Mode="" Description="Enable multi-threaded performance flags" Type="Variable" Value="true"/>
     <Config Name="Crossplay Platforms" Target="CROSSPLAY_PLATFORMS" Mode="" Description="Platforms allowed to connect" Type="Variable" Value="Steam,Xbox,PS5,Mac"/>
     <Config Name="Enable PvP" Target="ENABLE_PVP" Mode="" Description="Enable PvP trial mode (sets all 3 toggles)" Type="Variable" Value="false"/>
-    <Config Name="EXP Rate" Target="EXP_RATE" Mode="" Description="XP multiplier (1.0 = vanilla)" Type="Variable" Value=""/>
+    <Config Name="EXP Rate" Target="EXP_RATE" Mode="" Description="XP multiplier (1.0 = vanilla, blank = ini default)" Type="Variable" Value=""/>
     <Config Name="Pal Capture Rate" Target="PAL_CAPTURE_RATE" Mode="" Description="Capture multiplier (1.0 = vanilla)" Type="Variable" Value=""/>
     <Config Name="Egg Hatch Time" Target="PAL_EGG_HATCHING_TIME" Mode="" Description="Hours to hatch eggs (72 = vanilla)" Type="Variable" Value=""/>
+    <Config Name="Work Speed Rate" Target="WORK_SPEED_RATE" Mode="" Description="How fast Pals work (1.0 = vanilla)" Type="Variable" Value=""/>
     <Config Name="Death Penalty" Target="DEATH_PENALTY" Mode="" Description="None, Item, ItemAndEquipment, All" Type="Variable" Value=""/>
-    <Config Name="Enable Raids" Target="ENABLE_INVADER_ENEMY" Mode="" Description="Base raids (false halves RAM)" Type="Variable" Value=""/>
-    <Config Name="Version Pin (Manifest ID)" Target="TARGET_MANIFEST_ID" Mode="" Description="Lock to specific Steam build (SteamDB app 2394010). Blank = latest." Type="Variable" Value=""/>
+    <Config Name="Enable Raids" Target="ENABLE_INVADER_ENEMY" Mode="" Description="Base raids (false halves RAM usage)" Type="Variable" Value=""/>
+    <Config Name="Version Pin (Manifest ID)" Target="TARGET_MANIFEST_ID" Mode="" Description="Lock to specific Steam build (SteamDB app 2394010) — leave blank for latest" Type="Variable" Value=""/>
     <Config Name="Auto-Update on Start" Target="ALWAYS_UPDATE_ON_START" Mode="" Description="Run SteamCMD validation on every start" Type="Variable" Value="false"/>
     <Config Name="Timezone" Target="TZ" Mode="" Description="Timezone for backups and logs" Type="Variable" Value="America/New_York"/>
   </Container>
 </Containers>
 XMLEOF
 
-## --- 3. Pull and run the container ---
-docker run -d \
-  --name=palworld-proton-server \
-  --restart=unless-stopped \
-  --stop-timeout=30 \
-  --security-opt=no-new-privileges:true \
-  --security-opt=seccomp=unconfined \
-  --label net.unraid.docker.webui="http://[IP]:[PORT:8212]/v1/api/info" \
-  --label net.unraid.docker.managed="true" \
-  -p 8211:8211/udp \
-  -p 27015:27015/udp \
-  -p 25575:25575/tcp \
-  -p 8212:8212/tcp \
-  -v /mnt/user/appdata/palworld-proton-server/game:/palworld \
-  -v /mnt/user/appdata/palworld-proton-server/mods:/mods \
-  -v /etc/machine-id:/etc/machine-id:ro \
-  -e SERVER_NAME="My Palworld Server" \
-  -e ADMIN_PASSWORD="changeme" \
-  -e MAX_PLAYERS=32 \
-  -e RCON_ENABLED=true \
-  -e REST_API_ENABLED=true \
-  -e ENABLE_UE4SS=true \
-  -e BACKUP_ENABLED=true \
-  -e BACKUP_CRON_EXPRESSION="0 0 * * *" \
-  -e COMMUNITY=false \
-  -e MULTITHREADING=true \
-  -e CROSSPLAY_PLATFORMS="Steam,Xbox,PS5,Mac" \
-  -e ENABLE_PVP=false \
-  -e ALWAYS_UPDATE_ON_START=false \
-  -e TZ="America/New_York" \
-  ghcr.io/adam2893/palworld-proton-server:latest
-
 echo ""
 echo "============================================================"
-echo "  Palworld Proton Server deployed!"
+echo "  Template created. Now:"
 echo "============================================================"
 echo ""
-echo "  Container:  palworld-proton-server"
-echo "  Image:      ghcr.io/adam2893/palworld-proton-server:latest"
-echo "  Data:       /mnt/user/appdata/palworld-proton-server/game/"
-echo "  Mods:       /mnt/user/appdata/palworld-proton-server/mods/"
+echo "  1. Go to Docker tab > Add Container"
+echo "  2. Select template: palworld-proton-server"
+echo "  3. Change ADMIN_PASSWORD from 'changeme'!"
+echo "  4. Adjust any other settings (EXP rate, etc.)"
+echo "  5. Click Apply"
 echo ""
-echo "  Ports:"
-echo "    8211/udp  - Game port"
-echo "    27015/udp - Steam query"
-echo "    25575/tcp - RCON (do not expose publicly)"
-echo "    8212/tcp  - REST API / WebUI (do not expose publicly)"
+echo "  First boot takes 5-10 minutes (SteamCMD download + Wine)."
+echo "  Watch: docker logs -f palworld-proton-server"
+echo "  Success: 'wine: RLIMIT_NICE is <= 20' in logs"
 echo ""
-echo "  WebUI: Click the icon in the Unraid Docker tab,"
-echo "         or browse to http://[UNRAID_IP]:8212/v1/api/info"
-echo "         (auth: admin password you set above)"
+echo "  After it's running:"
+echo "    WebUI: Click the icon in Docker tab"
+echo "    RCON:  docker exec palworld-proton-server rcon-cli 'Save'"
+echo "    Backup: docker exec palworld-proton-server backup"
 echo ""
-echo "  RCON:  docker exec palworld-proton-server rcon-cli 'Save'"
-echo "  Backup: docker exec palworld-proton-server backup"
-echo ""
-echo "  First boot takes 5-10 minutes (SteamCMD download + Wine prefix)."
-echo "  Watch logs: docker logs -f palworld-proton-server"
-echo "  Look for 'wine: RLIMIT_NICE' = server booted successfully."
-echo ""
-echo "  IMPORTANT: Change ADMIN_PASSWORD from 'changeme'!"
-echo "  Go to Docker tab > click palworld-proton-server > Edit"
+echo "  Mods go in: /mnt/user/appdata/palworld-proton-server/mods/"
+echo "    UE4SS mods -> Win64/   |   .pak mods -> pak/"
 echo "============================================================"

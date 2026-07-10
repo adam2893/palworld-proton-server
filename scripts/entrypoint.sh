@@ -23,6 +23,11 @@ log() { echo -e "\033[32;1m>>> $1 <<<\033[0m"; }
 install_server() {
     log "Installing/Updating Palworld Windows Server (AppID ${APPID})"
 
+    ## Fix permissions: SteamCMD internally switches to the steam user,
+    ## so the steam user must own the install target and its own home directory.
+    chown -R steam:steam /home/steam 2>/dev/null || true
+    chown steam:steam "${SERVER_DIR}" 2>/dev/null || true
+
     local manifest_arg=""
     if [ -n "${TARGET_MANIFEST_ID:-}" ]; then
         log "Pinning to manifest ${TARGET_MANIFEST_ID}"
