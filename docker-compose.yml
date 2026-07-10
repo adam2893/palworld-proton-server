@@ -1,0 +1,108 @@
+services:
+  palworld:
+    build:
+      context: .
+      args:
+        PROTON_VERSION: GE-Proton10-26
+    image: palworld-proton-server:latest
+    container_name: palworld-server
+    restart: unless-stopped
+    stop_grace_period: 30s
+
+    # Proton/Wine needs seccomp=unconfined for ptrace syscalls;
+    # no-new-privileges is always safe
+    security_opt:
+      - no-new-privileges:true
+      - seccomp=unconfined
+
+    # Prevent log disk fill
+    logging:
+      driver: local
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+    ports:
+      - "${PORT:-8211}:8211/udp"        # Game port
+      - "${QUERY_PORT:-27015}:27015/udp" # Steam query port
+      - "${RCON_PORT:-25575}:25575/tcp" # RCON (don't expose publicly)
+      - "${REST_API_PORT:-8212}:8212/tcp" # REST API (don't expose publicly)
+
+    volumes:
+      - ./game:/palworld               # Server data, mods, save files, backups
+      - ./mods:/mods                   # Mod staging area (Win64/ and pak/)
+      - /etc/machine-id:/etc/machine-id:ro  # Stable machine-id for Proton/Steam
+
+    environment:
+      # Server identity
+      SERVER_NAME: "${SERVER_NAME:-My Palworld Server}"
+      SERVER_DESCRIPTION: "${SERVER_DESCRIPTION:-}"
+      SERVER_PASSWORD: "${SERVER_PASSWORD:-}"
+      ADMIN_PASSWORD: "${ADMIN_PASSWORD:-}"
+      MAX_PLAYERS: "${MAX_PLAYERS:-32}"
+
+      # Network
+      PORT: "${PORT:-8211}"
+      QUERY_PORT: "${QUERY_PORT:-27015}"
+      PUBLIC_IP: "${PUBLIC_IP:-}"
+      PUBLIC_PORT: "${PUBLIC_PORT:-}"
+      RCON_ENABLED: "${RCON_ENABLED:-true}"
+      RCON_PORT: "${RCON_PORT:-25575}"
+      REST_API_ENABLED: "${REST_API_ENABLED:-false}"
+      REST_API_PORT: "${REST_API_PORT:-8212}"
+
+      # Gameplay — general
+      COMMUNITY: "${COMMUNITY:-false}"
+      MULTITHREADING: "${MULTITHREADING:-true}"
+      CROSSPLAY_PLATFORMS: "${CROSSPLAY_PLATFORMS:-Steam,Xbox,PS5,Mac}"
+      ENABLE_PVP: "${ENABLE_PVP:-false}"
+      DIFFICULTY: "${DIFFICULTY:-}"
+      DEATH_PENALTY: "${DEATH_PENALTY:-}"
+      ENABLE_INVADER_ENEMY: "${ENABLE_INVADER_ENEMY:-}"
+
+      # Gameplay — rates (1.0 = vanilla, leave blank to use ini defaults)
+      EXP_RATE: "${EXP_RATE:-}"
+      PAL_CAPTURE_RATE: "${PAL_CAPTURE_RATE:-}"
+      PAL_SPAWN_NUM_RATE: "${PAL_SPAWN_NUM_RATE:-}"
+      PAL_EGG_HATCHING_TIME: "${PAL_EGG_HATCHING_TIME:-}"
+      WORK_SPEED_RATE: "${WORK_SPEED_RATE:-}"
+      DAYTIME_SPEED_RATE: "${DAYTIME_SPEED_RATE:-}"
+      NIGHTTIME_SPEED_RATE: "${NIGHTTIME_SPEED_RATE:-}"
+      COLLECTION_DROP_RATE: "${COLLECTION_DROP_RATE:-}"
+      ENEMY_DROP_ITEM_RATE: "${ENEMY_DROP_ITEM_RATE:-}"
+
+      # Gameplay — Pal/player stats
+      PAL_STOMACH_DECREACE_RATE: "${PAL_STOMACH_DECREACE_RATE:-}"
+      PAL_STAMINA_DECREACE_RATE: "${PAL_STAMINA_DECREACE_RATE:-}"
+      PLAYER_STOMACH_DECREACE_RATE: "${PLAYER_STOMACH_DECREACE_RATE:-}"
+      PLAYER_STAMINA_DECREACE_RATE: "${PLAYER_STAMINA_DECREACE_RATE:-}"
+      PAL_DAMAGE_RATE_ATTACK: "${PAL_DAMAGE_RATE_ATTACK:-}"
+      PAL_DAMAGE_RATE_DEFENSE: "${PAL_DAMAGE_RATE_DEFENSE:-}"
+      PLAYER_DAMAGE_RATE_ATTACK: "${PLAYER_DAMAGE_RATE_ATTACK:-}"
+      PLAYER_DAMAGE_RATE_DEFENSE: "${PLAYER_DAMAGE_RATE_DEFENSE:-}"
+
+      # Base/guild limits
+      BASE_CAMP_MAX_NUM: "${BASE_CAMP_MAX_NUM:-}"
+      BASE_CAMP_WORKER_MAX_NUM: "${BASE_CAMP_WORKER_MAX_NUM:-}"
+      GUILD_PLAYER_MAX_NUM: "${GUILD_PLAYER_MAX_NUM:-}"
+      DROP_ITEM_MAX_NUM: "${DROP_ITEM_MAX_NUM:-}"
+
+      # Mods
+      ENABLE_UE4SS: "${ENABLE_UE4SS:-true}"
+
+      # Version pinning (lock to a specific Steam manifest to avoid breaking UE4SS)
+      TARGET_MANIFEST_ID: "${TARGET_MANIFEST_ID:-}"
+
+      # Backups
+      BACKUP_ENABLED: "${BACKUP_ENABLED:-false}"
+      BACKUP_CRON_EXPRESSION: "${BACKUP_CRON_EXPRESSION:-0 0 * * *}"
+      DELETE_OLD_BACKUPS: "${DELETE_OLD_BACKUPS:-false}"
+      BACKUP_RETENTION_DAYS: "${BACKUP_RETENTION_DAYS:-30}"
+
+      # Maintenance
+      ALWAYS_UPDATE_ON_START: "${ALWAYS_UPDATE_ON_START:-false}"
+      TZ: "${TZ:-UTC}"
+
+    # Palworld 1.0: 16GB min for small servers, 32GB for community servers
+    # The map roughly doubles in 1.0 — plan for more RAM than early access
+    # mem_limit: 16g  # Uncomment and adjust for your player count

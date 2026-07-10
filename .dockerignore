@@ -1,0 +1,8 @@
+game/
+mods/
+.env
+.git
+.gitignore
+.dockerignore
+AGENTS.md
+*.md
