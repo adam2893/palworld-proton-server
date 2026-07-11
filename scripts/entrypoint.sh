@@ -314,10 +314,13 @@ install_mods
 
 ## Ensure settings file exists
 ensure_settings
+log "DEBUG: after ensure_settings"
 update_settings
+log "DEBUG: after update_settings"
 
 ## Start scheduled backups (if enabled)
 setup_backup_cron
+log "DEBUG: after setup_backup_cron"
 
 ## Start the server
 start_server
