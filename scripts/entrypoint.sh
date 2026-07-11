@@ -146,6 +146,11 @@ update_settings() {
 
     log "Applying server settings from environment variables"
 
+    ## Disable exit-on-error: sed -i can fail on FUSE/network filesystems
+    ## even when the underlying file is writable. We'd rather skip one
+    ## broken setting than kill the entire container.
+    set +e
+
     ## Helper: replace a FieldName="value" or FieldName=value in the ini
     set_field() {
         local field="$1" value="$2" quote="${3:-true}"
@@ -227,6 +232,9 @@ update_settings() {
 
     ## Invader enemy (disabling halves RAM — useful for constrained servers)
     [ -n "${ENABLE_INVADER_ENEMY:-}" ] && set_bool bEnableInvaderEnemy "$(to_bool "${ENABLE_INVADER_ENEMY}")"
+
+    ## Restore strict error handling for the rest of the script
+    set -e
 }
 
 ## Convert "true"/"false" strings to "True"/"False" for UE ini format
