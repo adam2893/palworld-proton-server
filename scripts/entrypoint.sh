@@ -7,7 +7,13 @@ set -euo pipefail
 ## Flow: install/update via SteamCMD → install UE4SS → copy mods → start server
 ## =============================================================================
 
-SERVER_EXE="${SERVER_DIR}/Pal/Binaries/Win64/PalServer-Win64-Test.exe"
+## Palworld 1.0 renamed the executable from -Test to -Shipping-Cmd
+SERVER_EXE_10="${SERVER_DIR}/Pal/Binaries/Win64/PalServer-Win64-Shipping-Cmd.exe"
+SERVER_EXE_EA="${SERVER_DIR}/Pal/Binaries/Win64/PalServer-Win64-Test.exe"
+SERVER_EXE="${SERVER_EXE_10}"  ## default to 1.0, fall back to Early Access
+if [ ! -f "${SERVER_EXE_10}" ] && [ -f "${SERVER_EXE_EA}" ]; then
+    SERVER_EXE="${SERVER_EXE_EA}"
+fi
 WIN64_DIR="${SERVER_DIR}/Pal/Binaries/Win64"
 SETTINGS_DIR="${SERVER_DIR}/Pal/Saved/Config/WindowsServer"
 SETTINGS_FILE="${SETTINGS_DIR}/PalWorldSettings.ini"
