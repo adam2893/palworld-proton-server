@@ -284,8 +284,10 @@ start_server() {
         args="${args} -restapi -restapiport=${REST_API_PORT:-8212}"
     fi
 
-    ## Fix ownership then drop to steam user
-    chown -R steam:steam "${SERVER_DIR}"
+    ## Fix ownership then drop to steam user.
+    ## chmod -R 777 is already done by install_server for Unraid FUSE compat.
+    ## chown is skipped — can fail silently on FUSE volumes.
+    chown -R steam:steam "${SERVER_DIR}" 2>/dev/null || true
 
     ## cd into the Win64 directory — Proton can get confused by unix pathing
     ## if the working directory doesn't match the exe location
